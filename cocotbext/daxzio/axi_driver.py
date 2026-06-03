@@ -202,7 +202,7 @@ class AxiLiteSink(CocoTBExtLogger):
 
     
 class AxiDriver:
-    def __init__(self, dut, axi_prefix="s_axi", clk_name="s_aclk", reset_name=None, seednum=None):
+    def __init__(self, dut, axi_prefix="s_axi", clk_name="s_aclk", reset_name=None, seednum=None) -> None:
         self.log = logging.getLogger(f"cocotb.AxiDriver")
         self.enable_logging()
         if reset_name is None:
@@ -227,7 +227,7 @@ class AxiDriver:
         
     
     @property
-    def length(self):
+    def length(self) -> int:
         if self.len is None:
             if not 0 == self.data and not self.data is None:
                 return max(math.ceil(math.log2(self.data)/32)*4, 4)
@@ -236,7 +236,7 @@ class AxiDriver:
         return self.len
 
     @property
-    def returned_val(self):
+    def returned_val(self) -> int:
         if hasattr(self.read_op, "data"):
             if hasattr(self.read_op.data, "data"):
                 return int.from_bytes(self.read_op.data.data, byteorder='little')
@@ -245,30 +245,30 @@ class AxiDriver:
         else:
             return int.from_bytes(self.read_op, byteorder='little')
             
-    def enable_logging(self):
+    def enable_logging(self) -> None:
         self.log.setLevel(logging.DEBUG)
     
-    def disable_logging(self):
+    def disable_logging(self) -> None:
         self.log.setLevel(logging.WARNING)
 
-    def enable_write_backpressure(self, seednum=None):
+    def enable_write_backpressure(self, seednum=None) -> None:
         if seednum is not None:
             self.base_seed = seednum
         self.axi_master.write_if.aw_channel.set_pause_generator(cycle_pause(self.base_seed+1))
         self.axi_master.write_if.w_channel.set_pause_generator(cycle_pause(self.base_seed+2))
         self.axi_master.write_if.b_channel.set_pause_generator(cycle_pause(self.base_seed+3))
     
-    def enable_read_backpressure(self, seednum=None):
+    def enable_read_backpressure(self, seednum=None) -> None:
         if seednum is not None:
             self.base_seed = seednum
         self.axi_master.read_if.r_channel.set_pause_generator(cycle_pause(self.base_seed+4))        
         self.axi_master.read_if.ar_channel.set_pause_generator(cycle_pause(self.base_seed+5))        
     
-    def enable_backpressure(self, seednum=None):
+    def enable_backpressure(self, seednum=None) -> None:
         self.enable_write_backpressure(seednum)      
         self.enable_read_backpressure(seednum)      
     
-    def disable_backpressure(self):
+    def disable_backpressure(self) -> None:
 #         self.axi_master.write_if.aw_channel.clear_pause_generator()
 #         self.axi_master.write_if.w_channel.clear_pause_generator()
 #         self.axi_master.write_if.b_channel.clear_pause_generator()
@@ -283,7 +283,7 @@ class AxiDriver:
         self.axi_master.read_if.ar_channel.set_pause_generator(itertools.cycle([0,]))      
     
     
-    async def poll(self, addr, data, length=None, debug=False):
+    async def poll(self, addr, data, length=None, debug=False) -> None:
         self.log.debug(f"Poll  0x{addr:08x}: for 0x{data:04x}")
         while True:
             await self.read(addr, debug=debug)
@@ -292,22 +292,23 @@ class AxiDriver:
                 break
         return
 
-    def check_read(self, debug=True):
+    def check_read(self, debug=True) -> None:
         if debug:
             self.log.debug(f"Read  0x{self.addr:08x}: 0x{self.returned_val:0{self.length*2}x}")
         if not self.returned_val == self.data and not None == self.data:
             raise Exception(f"Expected 0x{self.data:08x} doesn't match returned 0x{self.returned_val:08x}")
     
-    async def read(self, addr, data=None, length=None, debug=True):
+    async def read(self, addr, data=None, length=None, debug=True) -> int:
         self.addr = addr
         self.data = data
         self.len = length
         self.read_op = await self.axi_master.read(self.addr, self.length, arid=self.arid)
         self.check_read(debug)
-        return self.read_op
+#         return self.read_op
+        return self.returned_val
         
 
-    async def write(self, addr, data=None, length=None, debug=True):
+    async def write(self, addr, data=None, length=None, debug=True) -> None:
         self.len = length
         self.addr = addr
         if data is None:
@@ -323,7 +324,7 @@ class AxiDriver:
         #bytesdata = self.data.to_bytes(self.length, 'little')
         await self.axi_master.write(addr, bytesdata, awid=self.arid)
 
-    async def rmodw(self, addr, data, length=None, debug=True):
+    async def rmodw(self, addr, data, length=None, debug=True) -> None:
         await self.read(addr, length=None, debug=False)
         newdata = data | self.returned_val
         if debug:
